@@ -1,0 +1,179 @@
+package gascnet
+
+import (
+	"errors"
+	"fmt"
+	"net"
+	"syscall"
+)
+
+type tcpconn struct {
+	isopen     bool
+	watchread  bool //关注可读事件
+	watchwrite bool //关注可写事件
+	fd         int
+	svrid      int32
+	svr        *service
+	loopid     int
+	ctx        interface{}
+}
+
+func (this *tcpconn) SetCtx(ctx interface{}) {
+	this.ctx = ctx
+}
+
+func (this *tcpconn) GetCtx() interface{} {
+	return this.ctx
+}
+
+func (this *tcpconn) GetLoopid() int {
+	return this.loopid
+}
+
+func (this *tcpconn) Detach() error {
+	return this.svr.remove(this)
+}
+
+func (this *tcpconn) Attach(eng Engine, loopid int) error {
+	if this.svr != nil {
+		return errors.New("the svr about this conn is not nil")
+	}
+	eg := eng.(*engine)
+	svr := eg.getservice(loopid, this.svrid)
+	if svr != nil {
+		return svr.add(this)
+	} else {
+		return errors.New("svr not exist")
+	}
+}
+
+
+func (this *tcpconn) LocalAddr() string {
+	if sa, err := syscall.Getsockname(this.fd); err == nil && sa != nil {
+		return transSockaddrToString(sa)
+	} else {
+		return ""
+	}
+}
+
+func (this *tcpconn) RemoteAddr() string {
+	if sa, err := syscall.Getpeername(this.fd); err == nil && sa != nil {
+		return transSockaddrToString(sa)
+	} else {
+		return ""
+	}
+}
+
+
+func (this *tcpconn) SetReadBuffer(bytes int) error {
+	return socketSetReadBuffer(this.fd, bytes)
+}
+
+func (this *tcpconn) SetWriteBuffer(bytes int) error {
+	return socketSetWriteBuffer(this.fd, bytes)
+}
+
+func (this *tcpconn) SetLinger(sec int) error {
+	return socketSetLinger(this.fd, sec)
+}
+
+func (this *tcpconn) SetKeepAlivePeriod(sec int) error {
+	return socketSetKeepAlive(this.fd, sec)
+}
+
+func (this *tcpconn) SetNoDelay(nodelay bool) error {
+	if nodelay {
+		return socketSetNoDelay(this.fd, 1)
+	} else {
+		return socketSetNoDelay(this.fd, 0)
+	}
+}
+
+func (this *tcpconn) Close() (err error) {
+	if this.svr != nil {
+		this.svr.remove(this)
+	}
+	if this.fd >= 0 {
+		syscall.Close(this.fd)
+	}
+	return nil
+}
+
+func (this *tcpconn) Watch(canread, canwrite bool) error {
+	if this.svr == nil {
+		return errors.New("no service")
+	}
+	return this.svr.Watch(this, canread, canwrite)
+}
+
+func (this *tcpconn) Read(buf []byte) (int, error) {
+	return syscall.Read(this.fd, buf)
+}
+
+func (this *tcpconn) Write(buf []byte) (int, error) {
+	return syscall.Write(this.fd, buf)
+}
+
+func dial(protoaddr string) (Conn, error) {
+	network, ip, port, err := parseProtoAddr(protoaddr)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := net.ResolveTCPAddr(network, fmt.Sprintf("%s:%d", ip, port))
+	if err != nil {
+		return nil, err
+	}
+
+	var domain int
+	var sa syscall.Sockaddr
+	if network == "tcp4" {
+		domain = syscall.AF_INET
+		sa4 := &syscall.SockaddrInet4{Port: addr.Port}
+		if addr.IP != nil {
+			if len(addr.IP) == 16 {
+				copy(sa4.Addr[:], addr.IP[12:16])
+			} else {
+				copy(sa4.Addr[:], addr.IP)
+			}
+		}
+		sa = sa4
+	} else {
+		domain = syscall.AF_INET6
+		sa6 := &syscall.SockaddrInet6{Port: addr.Port}
+		if addr.IP != nil {
+			copy(sa6.Addr[:], addr.IP)
+		}
+		if addr.Zone != "" {
+			var iface *net.Interface
+			iface, err = net.InterfaceByName(addr.Zone)
+			if err != nil {
+				return nil, err
+			}
+			sa6.ZoneId = uint32(iface.Index)
+		}
+		sa = sa6
+	}
+	syscall.ForkLock.RLock()
+	fd, err := syscall.Socket(domain, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
+	syscall.ForkLock.RUnlock()
+
+	if err = syscall.Connect(fd, sa); err != nil {
+		syscall.Close(fd)
+		return nil, err
+	}
+
+	return &tcpconn{isopen: true, fd: int(fd), svrid: -1, loopid: -1}, nil
+}
+
+func transSockaddrToString(sa syscall.Sockaddr) string {
+	switch sa := sa.(type) {
+	case *syscall.SockaddrInet4:
+		return fmt.Sprintf("%d.%d.%d.%d:%d", sa.Addr[0], sa.Addr[1], sa.Addr[2], sa.Addr[3], sa.Port)
+	case *syscall.SockaddrInet6:
+		var ip net.IP
+		copy(ip, sa.Addr[:])
+		return fmt.Sprintf("%s:%d", ip.String(), sa.Port)
+	default:
+		return ""
+	}
+}
