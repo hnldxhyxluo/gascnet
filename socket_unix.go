@@ -1,4 +1,6 @@
-//+build darwin netbsd freebsd openbsd dragonfly linux
+//go:build darwin || netbsd || freebsd || openbsd || dragonfly || linux
+// +build darwin netbsd freebsd openbsd dragonfly linux
+
 package gascnet
 
 import (

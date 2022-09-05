@@ -122,6 +122,9 @@ func (this *engine) getservice(loopid int, svrid int32) *service {
 }
 
 func parseProtoAddr(protoAddr string) (network, ip string, port int, err error) {
+	if protoAddr == "" {
+		return
+	}
 	if strings.Contains(protoAddr, "://") {
 		network = strings.Split(protoAddr, "://")[0]
 		ipport := strings.Split(protoAddr, "://")[1]
@@ -130,7 +133,7 @@ func parseProtoAddr(protoAddr string) (network, ip string, port int, err error) 
 			port, _ = strconv.Atoi(strings.Split(ipport, ":")[1])
 		}
 	}
-	if protoAddr != "" && network != "tcp" && network != "tcp4" && network != "tcp6" {
+	if network != "tcp" && network != "tcp4" && network != "tcp6" {
 		err = errors.New("proto not support")
 	}
 	return
@@ -212,7 +215,7 @@ func (this *engine) AddService(name string, call func(name string, err error), e
 					listenfd: -1,
 					conns:    make(map[int]*tcpconn),
 					count:    0,
-					loopid:   i,
+					loopid:   loopid,
 					loop:     loop,
 				}
 				if int(info.index) >= len(loop.svrs) {

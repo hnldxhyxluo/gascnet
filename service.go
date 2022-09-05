@@ -27,6 +27,9 @@ func (this *service) addconn(c *tcpconn) error {
 		return errors.New("exist yet")
 	}
 	this.conns[c.fd] = c
+	c.svr = this
+	c.svrid = this.index
+	c.loopid = this.loopid
 	return nil
 }
 
@@ -41,13 +44,18 @@ func (this *service) Watch(c *tcpconn, watchread, watchwrite bool) (err error) {
 	return
 }
 
-func (this *service) remove(c *tcpconn) error {
+func (this *service) remove(c *tcpconn, isneedcall bool) error {
 	if c.svr != this {
 		return errors.New("not found")
 	}
+
 	this.loop.mod(c.fd, this.index, c.watchread, false, c.watchwrite, false)
 	delete(this.conns, c.fd)
 	c.svr = nil
+
+	if isneedcall {
+		this.evhandle.OnConnClose(this.loopid, c, nil)
+	}
 	return nil
 }
 

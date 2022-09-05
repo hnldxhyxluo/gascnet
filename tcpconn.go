@@ -31,22 +31,8 @@ func (this *tcpconn) GetLoopid() int {
 }
 
 func (this *tcpconn) Detach() error {
-	return this.svr.remove(this)
+	return this.svr.remove(this, false)
 }
-
-func (this *tcpconn) Attach(eng Engine, loopid int) error {
-	if this.svr != nil {
-		return errors.New("the svr about this conn is not nil")
-	}
-	eg := eng.(*engine)
-	svr := eg.getservice(loopid, this.svrid)
-	if svr != nil {
-		return svr.add(this)
-	} else {
-		return errors.New("svr not exist")
-	}
-}
-
 
 func (this *tcpconn) LocalAddr() string {
 	if sa, err := syscall.Getsockname(this.fd); err == nil && sa != nil {
@@ -63,7 +49,6 @@ func (this *tcpconn) RemoteAddr() string {
 		return ""
 	}
 }
-
 
 func (this *tcpconn) SetReadBuffer(bytes int) error {
 	return socketSetReadBuffer(this.fd, bytes)
@@ -90,11 +75,16 @@ func (this *tcpconn) SetNoDelay(nodelay bool) error {
 }
 
 func (this *tcpconn) Close() (err error) {
+	if !this.isopen {
+		return
+	}
 	if this.svr != nil {
-		this.svr.remove(this)
+		this.svr.remove(this, true)
 	}
 	if this.fd >= 0 {
+		this.isopen = false
 		syscall.Close(this.fd)
+		this.fd = -1
 	}
 	return nil
 }
@@ -157,7 +147,10 @@ func dial(protoaddr string) (Conn, error) {
 	fd, err := syscall.Socket(domain, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	syscall.ForkLock.RUnlock()
 
-	if err = syscall.Connect(fd, sa); err != nil {
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return nil, err
+	}
+	if err = syscall.Connect(fd, sa); err != nil && err != syscall.EINPROGRESS {
 		syscall.Close(fd)
 		return nil, err
 	}

@@ -75,8 +75,6 @@ type Conn interface {
 	GetLoopid() int
 	//从loop上移除
 	Detach() error
-	//添加到某loop上执行
-	Attach(eng Engine, loopid int) error
 
 	LocalAddr() string
 	RemoteAddr() string
