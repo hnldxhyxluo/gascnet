@@ -130,7 +130,7 @@ func parseProtoAddr(protoAddr string) (network, ip string, port int, err error) 
 			port, _ = strconv.Atoi(strings.Split(ipport, ":")[1])
 		}
 	}
-	if network != "tcp" && network != "tcp4" && network != "tcp6" {
+	if protoAddr != "" && network != "tcp" && network != "tcp4" && network != "tcp6" {
 		err = errors.New("proto not support")
 	}
 	return
