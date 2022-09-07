@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"gascnet"
@@ -21,7 +21,7 @@ type echohandler struct {
 }
 
 func (this *echohandler) OnServiceErr(loopid int, err error) {
-	fmt.Printf("echohandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
+	log.Printf("echohandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
 }
 
 func (this *echohandler) OnConnOpen(loopid int, conn gascnet.Conn) {
@@ -36,24 +36,24 @@ func (this *echohandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 	}
 
 	conn.SetCtx(info)
-	fmt.Printf("echohandler OnConnOpen loopid:%d addr:%s\n", loopid, info.addr)
+	log.Printf("echohandler OnConnOpen loopid:%d addr:%s\n", loopid, info.addr)
 }
 
 func (this *echohandler) OnConnClose(loopid int, conn gascnet.Conn, err error) {
 	info := conn.GetCtx().(*EchoInfo)
-	fmt.Printf("echohandler OnConnClose loopid:%d addr:%s\n", loopid, info.addr)
+	log.Printf("echohandler OnConnClose loopid:%d addr:%s\n", loopid, info.addr)
 }
 
 func (this *echohandler) OnConnReadWrite(loopid int, conn gascnet.Conn, canread, canwrite bool) {
 	info := conn.GetCtx().(*EchoInfo)
-	fmt.Printf("echohandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s\n", loopid, canread, canwrite, info.addr)
+	log.Printf("echohandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s\n", loopid, canread, canwrite, info.addr)
 	if canread {
 		rlen, err := conn.Read(info.buf[info.roffset:info.buflen])
-		if err != nil || rlen == 0 {
+		if err != nil {
+			log.Printf("echohandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s read err:%s\n", loopid, canread, canwrite, info.addr, err.Error())
 			conn.Close()
 			return
 		}
-		fmt.Printf("echohandler OnConnReadWrite loopid:%d rlen:%d\n", loopid, rlen)
 		if rlen > 0 {
 			info.roffset = info.roffset + rlen
 			if info.roffset == info.buflen {

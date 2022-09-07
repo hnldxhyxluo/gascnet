@@ -31,6 +31,6 @@ func (this *evloop) notify(c call) error {
 	return errors.New("push queue fail")
 }
 
-func (this *evloop) mod(fd int, svridx int32, oldread, newread, oldwrite, newwrite bool) {
+func (this *evloop) mod(fd int, svr *service, oldread, newread, oldwrite, newwrite bool) {
 
 }

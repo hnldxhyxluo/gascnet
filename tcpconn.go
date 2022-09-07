@@ -3,6 +3,7 @@ package gascnet
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"syscall"
 )
@@ -97,26 +98,61 @@ func (this *tcpconn) Watch(canread, canwrite bool) error {
 }
 
 func (this *tcpconn) Read(buf []byte) (int, error) {
-	return syscall.Read(this.fd, buf)
+	if n, err := syscall.Read(this.fd, buf); err == nil {
+		if n == 0 {
+			return 0, errors.New("remote closed")
+		}
+		return n, nil
+	} else if err == syscall.EAGAIN {
+		return n, nil
+	} else {
+		return n, err
+	}
+	//return syscall.Read(this.fd, buf)
 }
 
 func (this *tcpconn) Write(buf []byte) (int, error) {
-	return syscall.Write(this.fd, buf)
+	if n, err := syscall.Write(this.fd, buf); err == nil {
+		return n, nil
+	} else if err == syscall.EAGAIN {
+		return n, nil
+	} else {
+		return n, err
+	}
+	//return syscall.Write(this.fd, buf)
 }
 
 func dial(protoaddr string) (Conn, error) {
 	network, ip, port, err := parseProtoAddr(protoaddr)
 	if err != nil {
+		log.Println("dial parseaddr err")
 		return nil, err
 	}
 	addr, err := net.ResolveTCPAddr(network, fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
+		log.Println("dial ResolveTCPAddr err")
 		return nil, err
 	}
 
 	var domain int
 	var sa syscall.Sockaddr
-	if network == "tcp4" {
+	if network == "tcp6" {
+		domain = syscall.AF_INET6
+		sa6 := &syscall.SockaddrInet6{Port: addr.Port}
+		if addr.IP != nil {
+			copy(sa6.Addr[:], addr.IP)
+		}
+		if addr.Zone != "" {
+			var iface *net.Interface
+			iface, err = net.InterfaceByName(addr.Zone)
+			if err != nil {
+				log.Println("dial InterfaceByName err")
+				return nil, err
+			}
+			sa6.ZoneId = uint32(iface.Index)
+		}
+		sa = sa6
+	} else {
 		domain = syscall.AF_INET
 		sa4 := &syscall.SockaddrInet4{Port: addr.Port}
 		if addr.IP != nil {
@@ -127,30 +163,17 @@ func dial(protoaddr string) (Conn, error) {
 			}
 		}
 		sa = sa4
-	} else {
-		domain = syscall.AF_INET6
-		sa6 := &syscall.SockaddrInet6{Port: addr.Port}
-		if addr.IP != nil {
-			copy(sa6.Addr[:], addr.IP)
-		}
-		if addr.Zone != "" {
-			var iface *net.Interface
-			iface, err = net.InterfaceByName(addr.Zone)
-			if err != nil {
-				return nil, err
-			}
-			sa6.ZoneId = uint32(iface.Index)
-		}
-		sa = sa6
 	}
 	syscall.ForkLock.RLock()
 	fd, err := syscall.Socket(domain, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	syscall.ForkLock.RUnlock()
 
 	if err := syscall.SetNonblock(fd, true); err != nil {
+		log.Println("dial SetNonblock err")
 		return nil, err
 	}
 	if err = syscall.Connect(fd, sa); err != nil && err != syscall.EINPROGRESS {
+		log.Println("dial Connect err")
 		syscall.Close(fd)
 		return nil, err
 	}

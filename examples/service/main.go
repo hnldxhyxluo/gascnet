@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"syscall"
 	"time"
 
 	"gascnet"
@@ -18,62 +19,67 @@ func create_service(servicename string, protoaddr string, evhandle gascnet.EvHan
 	if protoaddr != "" {
 		if err := g_eng.AddService(servicename, func(name string, err error) {
 			if err != nil {
-				fmt.Printf("call service:%s add err:%s\n", name, err.Error())
+				log.Printf("call service:%s add err:%s\n", name, err.Error())
 			} else {
-				fmt.Printf("call service:%s add success\n", name)
+				log.Printf("call service:%s add success\n", name)
 			}
 		}, evhandle, gascnet.WithProtoAddr(protoaddr), gascnet.WithReusePort(true), gascnet.WithLoadBalance(gascnet.LoadBalanceRR)); err != nil {
-			fmt.Printf("service:%s add err:%s\n", servicename, err.Error())
+			log.Printf("service:%s add err:%s\n", servicename, err.Error())
 			return
 		}
 	} else {
 		if err := g_eng.AddService(servicename, func(name string, err error) {
 			if err != nil {
-				fmt.Printf("call service:%s add err:%s\n", name, err.Error())
+				log.Printf("call service:%s add err:%s\n", name, err.Error())
 			} else {
-				fmt.Printf("call service:%s add success\n", name)
+				log.Printf("call service:%s add success\n", name)
 			}
 		}, evhandle); err != nil {
-			fmt.Printf("service:%s add err:%s\n", servicename, err.Error())
+			log.Printf("service:%s add err:%s\n", servicename, err.Error())
 			return
 		}
 	}
 
 	if err := g_eng.StartService(servicename, func(name string, err error) {
 		if err != nil {
-			fmt.Printf("call service:%s start err:%s\n", name, err.Error())
+			log.Printf("call service:%s start err:%s\n", name, err.Error())
 		} else {
-			fmt.Printf("call service:%s start success\n", name)
+			log.Printf("call service:%s start success\n", name)
 		}
 	}); err != nil {
-		fmt.Printf("service:%s start err:%s\n", servicename, err.Error())
+		log.Printf("service:%s start err:%s\n", servicename, err.Error())
 	}
 }
 
 func main() {
 
-	fmt.Printf("------------run-------------------\n")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	log.Printf("------------run-------------------\n")
+
+	log.Printf(syscall.EAGAIN.Error())
+	log.Printf(syscall.EINPROGRESS.Error())
 
 	g_eng = gascnet.NewEngine(gascnet.WithLoops(2), gascnet.WithLockThread(true))
 	if g_eng == nil {
-		fmt.Printf("eng is nil\n")
+		log.Printf("eng is nil\n")
 		return
 	}
 	g_eng.AddTask(0, func(loopid int) {
-		fmt.Printf("0 and run at loopid:%d\n", loopid)
+		log.Printf("0 and run at loopid:%d\n", loopid)
 	})
 	g_eng.AddTask(1, func(loopid int) {
-		fmt.Printf("0 and run at loopid:%d\n", loopid)
+		log.Printf("0 and run at loopid:%d\n", loopid)
 	})
 	for i := 0; i < 5; i++ {
 		time.Sleep(1 * time.Second)
 		index := i
 		g_eng.AddTask(i%g_eng.LoopNum(), func(loopid int) {
-			fmt.Printf("%d and run at loopid:%d\n", index, loopid)
+			log.Printf("%d and run at loopid:%d\n", index, loopid)
 		})
 	}
 
-	fmt.Printf("------------start-------------------\n")
+	log.Printf("------------start-------------------\n")
 
 	create_service(echoservice, "tcp://0.0.0.0:8082", &echohandler{})
 	create_service(backservice, "", &backhandler{})
@@ -82,5 +88,5 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 	}
-	fmt.Printf("------------end-------------------\n")
+	log.Printf("------------end-------------------\n")
 }

@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"syscall"
 	"unsafe"
-
 	//"golang.org/x/sys/unix"
 )
 
@@ -46,7 +45,7 @@ func (this *evloop) run(lockosthread bool) {
 		defer runtime.UnlockOSThread()
 	}
 
-	this.mod(this.notifyfd, -1, false, true, false, false)
+	this.mod(this.notifyfd, nil, false, true, false, false)
 
 	events := make([]syscall.EpollEvent, 128)
 	havenotify := false
@@ -94,9 +93,13 @@ func (this *evloop) notify(c call) error {
 	return nil
 }
 
-func (this *evloop) mod(fd int, svridx int32, oldread, newread, oldwrite, newwrite bool) {
+func (this *evloop) mod(fd int, svr *service, oldread, newread, oldwrite, newwrite bool) {
 	var ev uint32
 	var oper int
+	var index int32
+	if svr != nil {
+		index = svr.index
+	}
 	if !oldread && !oldwrite {
 		if !newread && !newwrite {
 			return
@@ -108,7 +111,7 @@ func (this *evloop) mod(fd int, svridx int32, oldread, newread, oldwrite, newwri
 		if newwrite {
 			ev = ev | syscall.EPOLLOUT
 		}
-	}else if newread || newwrite {
+	} else if newread || newwrite {
 		oper = syscall.EPOLL_CTL_MOD
 		if newread {
 			ev = syscall.EPOLLIN
@@ -116,7 +119,7 @@ func (this *evloop) mod(fd int, svridx int32, oldread, newread, oldwrite, newwri
 		if newwrite {
 			ev = ev | syscall.EPOLLOUT
 		}
-	}else{
+	} else {
 		oper = syscall.EPOLL_CTL_DEL
 		ev = syscall.EPOLLIN | syscall.EPOLLOUT
 	}
@@ -124,7 +127,7 @@ func (this *evloop) mod(fd int, svridx int32, oldread, newread, oldwrite, newwri
 	if err := syscall.EpollCtl(this.epollfd, oper, fd,
 		&syscall.EpollEvent{Fd: int32(fd),
 			Events: ev,
-			Pad:    svridx,
+			Pad:    index,
 		},
 	); err != nil {
 		panic(err)

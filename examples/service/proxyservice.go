@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"gascnet"
@@ -29,7 +29,7 @@ type proxyhandler struct {
 }
 
 func (this *proxyhandler) OnServiceErr(loopid int, err error) {
-	fmt.Printf("proxyhandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
+	log.Printf("proxyhandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
 }
 
 func (this *proxyhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
@@ -37,9 +37,9 @@ func (this *proxyhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 	back, err := gascnet.Dial("tcp://127.0.0.1:8082")
 	if err != nil || back == nil {
 		if err != nil {
-			fmt.Printf("proxyhandler OnConnOpen loopid:%d addr:%s connect back:%s err:%s\n", loopid, addr, "tcp://127.0.0.1:8082", err.Error())
+			log.Printf("proxyhandler OnConnOpen loopid:%d addr:%s connect back:%s err:%s\n", loopid, addr, "tcp://127.0.0.1:8082", err.Error())
 		} else {
-			fmt.Printf("proxyhandler OnConnOpen loopid:%d addr:%s connect back:%s ret nil\n", loopid, addr, "tcp://127.0.0.1:8082")
+			log.Printf("proxyhandler OnConnOpen loopid:%d addr:%s connect back:%s ret nil\n", loopid, addr, "tcp://127.0.0.1:8082")
 		}
 		conn.Close()
 		return
@@ -63,7 +63,7 @@ func (this *proxyhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 
 	//同样的 loopid 确保 front 和 back 在同一个 携程上
 	if err := g_eng.AddToService(backservice, loopid, back); err != nil {
-		fmt.Printf("proxyhandler OnConnOpen loopid:%d addr:%s add back to loop err:%s\n", loopid, addr, err.Error())
+		log.Printf("proxyhandler OnConnOpen loopid:%d addr:%s add back to loop err:%s\n", loopid, addr, err.Error())
 		conn.Close()
 		back.Close()
 		return
@@ -72,30 +72,31 @@ func (this *proxyhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 	back.Watch(true, false)
 	conn.Watch(true, false)
 
-	fmt.Printf("proxyhandler OnConnOpen loopid:%d addr:%s\n", loopid, addr)
+	log.Printf("proxyhandler OnConnOpen loopid:%d addr:%s\n", loopid, addr)
 }
 
 func (this *proxyhandler) OnConnClose(loopid int, conn gascnet.Conn, err error) {
 	ctx := conn.GetCtx()
 	if ctx == nil {
-		fmt.Printf("proxyhandler OnConnClose loopid:%d ctx is nil\n", loopid)
+		log.Printf("proxyhandler OnConnClose loopid:%d ctx is nil\n", loopid)
 		return
 	}
 	info := ctx.(*ProxyInfo)
 	if info.back != nil {
 		info.back.Close()
 	}
-	fmt.Printf("proxyhandler OnConnClose loopid:%d addr:%s\n", loopid, info.addr)
+	log.Printf("proxyhandler OnConnClose loopid:%d addr:%s\n", loopid, info.addr)
 }
 
 func (this *proxyhandler) OnConnReadWrite(loopid int, conn gascnet.Conn, canread, canwrite bool) {
 	info := conn.GetCtx().(*ProxyInfo)
-	fmt.Printf("proxyhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s\n", loopid, canread, canwrite, info.addr)
+	log.Printf("proxyhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s\n", loopid, canread, canwrite, info.addr)
 	back := info.back
 	front := info.front
 	if canread {
 		rlen, err := front.Read(info.upbuf[info.uproffset:info.upbuflen])
-		if err != nil || rlen == 0 {
+		if err != nil {
+			log.Printf("proxyhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s read err:%s\n", loopid, canread, canwrite, info.addr, err.Error())
 			front.Close()
 			return
 		}
@@ -117,6 +118,7 @@ func (this *proxyhandler) OnConnReadWrite(loopid int, conn gascnet.Conn, canread
 	if canwrite {
 		wlen, err := front.Write(info.downbuf[info.downsoffset:info.downroffset])
 		if err != nil {
+			log.Printf("proxyhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s write err:%s\n", loopid, canread, canwrite, info.addr, err.Error())
 			front.Close()
 			return
 		}
@@ -136,35 +138,36 @@ type backhandler struct {
 }
 
 func (this *backhandler) OnServiceErr(loopid int, err error) {
-	fmt.Printf("backhandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
+	log.Printf("backhandler OnServiceErr loopid:%d err:%s\n", loopid, err.Error())
 }
 
 func (this *backhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 	info := conn.GetCtx().(*ProxyInfo)
-	fmt.Printf("backhandler OnConnOpen loopid:%d frontaddr:%s\n", loopid, info.addr)
+	log.Printf("backhandler OnConnOpen loopid:%d frontaddr:%s\n", loopid, info.addr)
 }
 
 func (this *backhandler) OnConnClose(loopid int, conn gascnet.Conn, err error) {
 	ctx := conn.GetCtx()
 	if ctx == nil {
-		fmt.Printf("backhandler OnConnClose loopid:%d ctx is nil\n", loopid)
+		log.Printf("backhandler OnConnClose loopid:%d ctx is nil\n", loopid)
 		return
 	}
 	info := ctx.(*ProxyInfo)
 	if info.front != nil {
 		info.front.Close()
 	}
-	fmt.Printf("backhandler OnConnClose loopid:%d frontaddr:%s\n", loopid, info.addr)
+	log.Printf("backhandler OnConnClose loopid:%d frontaddr:%s\n", loopid, info.addr)
 }
 
 func (this *backhandler) OnConnReadWrite(loopid int, conn gascnet.Conn, canread, canwrite bool) {
 	info := conn.GetCtx().(*ProxyInfo)
-	fmt.Printf("backhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t frontaddr:%s\n", loopid, canread, canwrite, info.addr)
+	log.Printf("backhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t frontaddr:%s\n", loopid, canread, canwrite, info.addr)
 	back := info.back
 	front := info.front
 	if canread {
 		rlen, err := back.Read(info.downbuf[info.downroffset:info.downbuflen])
-		if err != nil || rlen == 0 {
+		if err != nil {
+			log.Printf("backhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s read err:%s\n", loopid, canread, canwrite, info.addr, err.Error())
 			back.Close()
 			return
 		}
@@ -183,6 +186,7 @@ func (this *backhandler) OnConnReadWrite(loopid int, conn gascnet.Conn, canread,
 	if canwrite {
 		wlen, err := back.Write(info.upbuf[info.upsoffset:info.uproffset])
 		if err != nil {
+			log.Printf("backhandler OnConnReadWrite loopid:%d canread:%t canwrite:%t addr:%s write err:%s\n", loopid, canread, canwrite, info.addr, err.Error())
 			back.Close()
 			return
 		}

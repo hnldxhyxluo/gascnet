@@ -1,4 +1,6 @@
-//+build darwin netbsd freebsd openbsd dragonfly linux
+//go:build darwin || netbsd || freebsd || openbsd || dragonfly || linux
+// +build darwin netbsd freebsd openbsd dragonfly linux
+
 package gascnet
 
 import (
@@ -97,5 +99,5 @@ func (this *service) start() {
 	}
 
 	this.listenfd = fd
-	this.loop.mod(this.listenfd, this.index, false, true, false, false)
+	this.loop.mod(this.listenfd, this, false, true, false, false)
 }
