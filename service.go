@@ -28,7 +28,7 @@ func (this *service) addconn(c *tcpconn) error {
 	}
 	this.conns[c.fd] = c
 	c.svr = this
-	c.svrid = this.index
+	c.svrid = int(this.index)
 	c.loopid = this.loopid
 	return nil
 }

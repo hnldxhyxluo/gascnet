@@ -13,7 +13,7 @@ type tcpconn struct {
 	watchread  bool //关注可读事件
 	watchwrite bool //关注可写事件
 	fd         int
-	svrid      int32
+	svrid      int
 	svr        *service
 	loopid     int
 	ctx        interface{}
@@ -29,6 +29,10 @@ func (this *tcpconn) GetCtx() interface{} {
 
 func (this *tcpconn) GetLoopid() int {
 	return this.loopid
+}
+
+func (this *tcpconn) GetSvrid() int {
+	return this.svrid
 }
 
 func (this *tcpconn) Detach() error {

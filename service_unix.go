@@ -21,7 +21,7 @@ func (this *service) accept() {
 		this.evhandle.OnServiceErr(this.loop.id, err)
 		return
 	}
-	c := &tcpconn{isopen: true, svrid: this.index, fd: newfd, svr: this, loopid: this.loop.id}
+	c := &tcpconn{isopen: true, svrid: int(this.index), fd: newfd, svr: this, loopid: this.loop.id}
 	this.conns[newfd] = c
 	this.evhandle.OnConnOpen(this.loopid, c)
 }
