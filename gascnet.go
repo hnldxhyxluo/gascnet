@@ -114,13 +114,13 @@ type Engine interface {
 	LoopNum() int
 	AddTask(loopid int, call func(loopid int)) error
 
-	AddService(name string, call func(name string, err error), evhandle EvHandler, opts ...SvrOption) error
-	StartService(name string, call func(name string, err error)) error
-	StopService(name string, call func(name string, err error)) error
-	DelService(name string, call func(name string, err error)) error
+	AddService(svrid int, call func(svrid int, err error), evhandle EvHandler, opts ...SvrOption) error
+	StartService(svrid int, call func(svrid int, err error)) error
+	StopService(svrid int, call func(svrid int, err error)) error
+	DelService(svrid int, call func(svrid int, err error)) error
 
 	//not thread safe
-	AddToService(name string, loopid int, conn Conn) error
+	AddToService(loopid, svrid int, conn Conn) error
 }
 
 func Dial(protoaddr string) (Conn, error) {

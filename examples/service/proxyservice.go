@@ -62,7 +62,7 @@ func (this *proxyhandler) OnConnOpen(loopid int, conn gascnet.Conn) {
 	back.SetCtx(proxyinfo)
 
 	//同样的 loopid 确保 front 和 back 在同一个 携程上
-	if err := g_eng.AddToService(backservice, loopid, back); err != nil {
+	if err := g_eng.AddToService(loopid, backserviceid, back); err != nil {
 		log.Printf("proxyhandler OnConnOpen loopid:%d addr:%s add back to loop err:%s\n", loopid, addr, err.Error())
 		conn.Close()
 		back.Close()

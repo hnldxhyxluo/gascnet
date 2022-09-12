@@ -20,7 +20,7 @@ const (
 
 type svrinfo struct {
 	opt       svroption
-	index     int
+	index     int32
 	network   string
 	ip        string
 	port      int
@@ -139,12 +139,21 @@ func parseProtoAddr(protoAddr string) (network, ip string, port int, err error) 
 	return
 }
 
-func (this *engine) AddService(name string, call func(name string, err error), evhandle EvHandler, opts ...SvrOption) error {
-	svrname := name
+func (this *engine) AddService(svrid int, call func(svrid int, err error), evhandle EvHandler, opts ...SvrOption) error {
 	logic := func() {
 
 		if this.isexit {
-			call(svrname, errors.New("engine exited"))
+			call(svrid, errors.New("engine exited"))
+			return
+		}
+
+		if svrid < 0 {
+			call(svrid, errors.New("svrid < 0"))
+			return
+		}
+
+		if svrid < len(this.svrs) && this.svrs[svrid] != nil {
+			call(svrid, errors.New("svrid already exist"))
 			return
 		}
 
@@ -155,7 +164,7 @@ func (this *engine) AddService(name string, call func(name string, err error), e
 
 		network, ip, port, err := parseProtoAddr(svropt.protoaddr)
 		if err != nil {
-			call(svrname, err)
+			call(svrid, err)
 			return
 		}
 
@@ -163,41 +172,26 @@ func (this *engine) AddService(name string, call func(name string, err error), e
 			svropt.listenbacklog = 128
 		}
 
-		pos := len(this.svrs)
-		for i := 0; i < pos; i++ {
-			svr := this.svrs[i]
-			if svr == nil {
-				if i < pos {
-					pos = i
-				}
-				continue
-			}
-			if svr.name == svrname {
-				call(svrname, errors.New("service name already exists"))
-				return
-			}
-		}
-		if pos == len(this.svrs) {
-			dstlen := pos + 10
-			svrs := make([]*svrinfo, pos, dstlen)
-			for i := 0; i < pos; i++ {
-				svrs[i] = this.svrs[i]
+		if svrid >= len(this.svrs) {
+			wantlen := svrid / 10 + 10
+			svrs := make([]*svrinfo, wantlen, wantlen)
+			for i, v := range this.svrs {
+				svrs[i] = v
 			}
 			this.svrs = svrs
 		}
 
 		info := &svrinfo{
-			index:    pos,
+			index:    int32(svrid),
 			opt:      *svropt,
 			network:  network,
 			ip:       ip,
 			port:     port,
-			name:     svrname,
 			evhandle: evhandle,
 			curstate: svrstateNO,
 			dststate: svrstateSTOP,
 		}
-		this.svrs = append(this.svrs, info)
+		this.svrs[svrid] = info
 
 		var wg sync.WaitGroup
 		wg.Add(this.opt.numloops)
@@ -210,7 +204,6 @@ func (this *engine) AddService(name string, call func(name string, err error), e
 					index:    int32(info.index),
 					ip:       info.ip,
 					port:     info.port,
-					name:     info.name,
 					evhandle: info.evhandle,
 					listenfd: -1,
 					conns:    make(map[int]*tcpconn),
@@ -231,40 +224,33 @@ func (this *engine) AddService(name string, call func(name string, err error), e
 		}
 		wg.Wait()
 		info.curstate = svrstateSTOP
-		call(svrname, nil)
+		call(svrid, nil)
 	}
 
 	return this.push(logic)
 }
 
-func (this *engine) StartService(name string, call func(name string, err error)) error {
+func (this *engine) StartService(svrid int, call func(svrid int, err error)) error {
 
-	svrname := name
 	logic := func() {
-		var info *svrinfo
 
-		for i := 0; i < len(this.svrs); i++ {
-			if this.svrs[i] == nil {
-				continue
-			}
-			if this.svrs[i].name == svrname {
-				info = this.svrs[i]
-				break
-			}
-		}
-
-		if info == nil {
-			call(svrname, errors.New("not found"))
+		if svrid >= len(this.svrs) || svrid < 0 {
+			call(svrid, errors.New("svrid invalid"))
 			return
 		}
+		if this.svrs[svrid] == nil {
+			call(svrid, errors.New("svrid not found"))
+		}
+		
+		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {
-			call(svrname, errors.New("stat is changing"))
+			call(svrid, errors.New("stat is changing"))
 			return
 		}
 
 		if info.curstate != svrstateSTOP {
-			call(svrname, errors.New("stat conflict"))
+			call(svrid, errors.New("stat conflict"))
 			return
 		}
 
@@ -282,34 +268,28 @@ func (this *engine) StartService(name string, call func(name string, err error))
 			wg.Wait()
 		}
 		info.curstate = svrstateSTART
-		call(svrname, nil)
+		call(svrid, nil)
 	}
 
 	return this.push(logic)
 }
 
-func (this *engine) StopService(name string, call func(name string, err error)) error {
-	svrname := name
+func (this *engine) StopService(svrid int, call func(svrid int, err error)) error {
+
 	logic := func() {
-		var info *svrinfo
 
-		for i := 0; i < len(this.svrs); i++ {
-			if this.svrs[i] == nil {
-				continue
-			}
-			if this.svrs[i].name == svrname {
-				info = this.svrs[i]
-				break
-			}
-		}
-
-		if info == nil {
-			call(svrname, errors.New("not found"))
+		if svrid >= len(this.svrs) || svrid < 0 {
+			call(svrid, errors.New("svrid invalid"))
 			return
 		}
+		if this.svrs[svrid] == nil {
+			call(svrid, errors.New("svrid not found"))
+		}
+		
+		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {
-			call(svrname, errors.New("stat is changing"))
+			call(svrid, errors.New("stat is changing"))
 			return
 		}
 
@@ -326,34 +306,28 @@ func (this *engine) StopService(name string, call func(name string, err error)) 
 		}
 		wg.Wait()
 		info.curstate = svrstateSTOP
-		call(svrname, nil)
+		call(svrid, nil)
 	}
 
 	return this.push(logic)
 }
 
-func (this *engine) DelService(name string, call func(name string, err error)) error {
-	svrname := name
+func (this *engine) DelService(svrid int, call func(svrid int, err error)) error {
+
 	logic := func() {
-		var info *svrinfo
 
-		for i := 0; i < len(this.svrs); i++ {
-			if this.svrs[i] == nil {
-				continue
-			}
-			if this.svrs[i].name == name {
-				info = this.svrs[i]
-				break
-			}
-		}
-
-		if info == nil {
-			call(svrname, errors.New("not found"))
+		if svrid >= len(this.svrs) || svrid < 0 {
+			call(svrid, errors.New("svrid invalid"))
 			return
 		}
+		if this.svrs[svrid] == nil {
+			call(svrid, errors.New("svrid not found"))
+		}
+		
+		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {
-			call(svrname, errors.New("stat is changing"))
+			call(svrid, errors.New("stat is changing"))
 			return
 		}
 
@@ -372,35 +346,29 @@ func (this *engine) DelService(name string, call func(name string, err error)) e
 		wg.Wait()
 		info.curstate = svrstateDEL
 		this.svrs[info.index] = nil
-		call(svrname, nil)
+		call(svrid, nil)
 	}
 
 	return this.push(logic)
 }
 
-func (this *engine) AddToService(name string, loopid int, conn Conn) error {
-	if loopid < 0 || loopid >= this.opt.numloops || conn == nil {
+func (this *engine) AddToService(loopid, svrid int, conn Conn) error {
+	if loopid < 0 || loopid >= this.opt.numloops || svrid < 0 || svrid >= len(this.svrs) || conn == nil {
 		return errors.New("param invalid")
+	}
+
+	if this.svrs[svrid] == nil {
+		return errors.New("svrid not exist")
+	}
+
+	if info := this.svrs[svrid]; info.curstate != info.dststate || info.curstate != svrstateSTART {
+		return errors.New("svrid not start")
 	}
 
 	c := conn.(*tcpconn)
 	if c == nil || !c.isopen {
 		return errors.New("conn invalid")
 	}
-	if name == "" {
-		if c.svrid >= 0 && c.svrid < int32(len(this.loops[loopid].svrs)) {
-			svr := this.loops[loopid].svrs[c.svrid]
-			if svr != nil {
-				return svr.addconn(c)
-			}
-		}
-	} else {
-		for _, svr := range this.loops[loopid].svrs {
-			if svr != nil && svr.name == name {
-				return svr.addconn(c)
-			}
-		}
-	}
 
-	return errors.New("service not found")
+	return this.loops[loopid].svrs[svrid].addconn(c)
 }
