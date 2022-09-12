@@ -5,7 +5,7 @@ import (
 	"syscall"
 	"time"
 
-	"gascnet"
+	"github.com/hnldxhyxluo/gascnet"
 )
 
 var (

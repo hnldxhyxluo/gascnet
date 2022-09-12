@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"gascnet"
+	"github.com/hnldxhyxluo/gascnet"
 )
 
 type ProxyInfo struct {
