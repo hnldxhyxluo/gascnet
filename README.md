@@ -3,24 +3,42 @@ gascnet²Î¿¼gnetºÍevioÊµÏÖ£¬Ö»¶ÔepollºÍkqueue×öÁË¼òµ¥µÄ·â×°£¬Ìá¹©¶ÔtcpÁ¬½Ó¿É¶Á¿ÉÐ
 
 gascnetÓëgnetºÍevioµÄ²»Í¬µãÊÇÔÚ»Øµ÷ÖÐ´«µÝÁËeventloopÊµÀýµÄidºÅ£¬ÒÔ±ãµ÷ÓÃÕßÓÐ»ú»áÄÜ¹»¼õÉÙËø²Ù×÷¡£
 
-º¯ÊýDialÓÃÓÚÁ¬½ÓÄ³¸öµØÖ·
 
-º¯ÊýNewEngineÓÃÓÚ´´½¨ÊÂ¼þengine,
+º¯ÊýËµÃ÷£º
+
+º¯ÊýDialÓÃÓÚÁ¬½ÓÄ³¸öµØÖ·¡£
+
+º¯ÊýNewEngineÓÃÓÚ´´½¨ÊÂ¼þengine¡£
+
 º¯ÊýWithLoopsÓÃÓÚÉèÖÃengineµÄeventloop¸öÊý£¬Ã¿Ò»¸öeventloopÊÇÒ»¸öepoll»òkqueueµÄÊµÀý¡£Èç¹û¸ÃÖµµÈÓÚ0Ôò´´½¨µÄeventloopÊýÁ¿µÈÓÚcpuÊý£¬Ð¡ÓÚ0ÔòeventloopÊýÁ¿µÈÓÚcpuÊý¼õÈ¥¸ÃÖµ£¬´óÓÚ0ÔòÓëÊµ¼ÊµÄeventloopÊýÁ¿Ò»Ñù¡£
+
 º¯ÊýWithLoopsÓÃÓÚÉèÖÃengineµÄÃ¿Ò»¸öeventloopÊÇ·ñ¶ÀÕ¼Ò»¸öÏß³Ì¡£
 
+
+
 º¯ÊýWithProtoAddrÓÃÓÚÉèÖÃservice°ó¶¨µÄipºÍ¶Ë¿Ú,service¿ÉÒÔ²»ÉèÖÃ¸ÃÖµ¡£
+
 º¯ÊýWithListenbacklogÓÃÓÚÉèÖÃservice listeenµÄbacklog³¤¶È¡£
-º¯ÊýWithReusePortºÍWithReuseAddrÉèÖÃservice°ó¶¨µÄµØÖ·ºÍ¶Ë¿ÚÊÇ·ñ¶ÀÕ¼
-º¯ÊýWithLoadBalanceÉèÖÃservice¶Ôacceptµ½ÐÂµÄÁ¬½ÓºóµÄ¸ºÔØ¾ùºâ²ßÂÔ
+
+º¯ÊýWithReusePortºÍWithReuseAddrÉèÖÃservice°ó¶¨µÄµØÖ·ºÍ¶Ë¿ÚÊÇ·ñ¶ÀÕ¼¡£
+
+º¯ÊýWithLoadBalanceÉèÖÃservice¶Ôacceptµ½ÐÂµÄÁ¬½ÓºóµÄ¸ºÔØ¾ùºâ²ßÂÔ¡£
+
+
 
 engineµÄ½Ó¿ÚÖÐ
-LoopNumº¯Êý ÓÃÓÚ»ñÈ¡µ±Ç°engineµÄevloopÊýÁ¿
-AddTaskÓÃÓÚ´´½¨Ò»¸öÔÚÖ¸¶¨loopidÉÏÖ´ÐÐº¯ÊýµÄÈÎÎñ¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ
-AddServiceÓÃÓÚ´´½¨service¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ
-StartServiceÓÃÓÚÆô¶¯service£¬Èç¹û¸ÃserviceÊ¹ÓÃWithProtoAddrÉèÖÃÁËµØÖ·Ôò´ËÊ±»á°ó¶¨¸ÃµØÖ·¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ
-StopServiceÍ£Ö¹service£¬Èç¹û¸Ãservice°ó¶¨ÁËµØÖ·Ôò»áclose¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ
-DelServiceÒÆ³ý¸Ãservice¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ
+
+LoopNumº¯Êý ÓÃÓÚ»ñÈ¡µ±Ç°engineµÄevloopÊýÁ¿¡£
+
+AddTaskÓÃÓÚ´´½¨Ò»¸öÔÚÖ¸¶¨loopidÉÏÖ´ÐÐº¯ÊýµÄÈÎÎñ¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ¡£
+
+AddServiceÓÃÓÚ´´½¨service¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ¡£
+
+StartServiceÓÃÓÚÆô¶¯service£¬Èç¹û¸ÃserviceÊ¹ÓÃWithProtoAddrÉèÖÃÁËµØÖ·Ôò´ËÊ±»á°ó¶¨¸ÃµØÖ·¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ¡£
+
+StopServiceÍ£Ö¹service£¬Èç¹û¸Ãservice°ó¶¨ÁËµØÖ·Ôò»áclose¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ¡£
+
+DelServiceÒÆ³ý¸Ãservice¡£»Øµ÷º¯Êý»áÔÚÒ»¸ö×¨ÃÅµÄÐ­³ÌÖÐµ÷ÓÃ¡£
 
 AddToServiceÓÃÓÚÌí¼ÓÁ¬½Óµ½Ö¸¶¨loopÉÏµÄÖ¸¶¨serviceÉÏ£¬Ö÷ÒªÓÃÓÚ¹ÜÀíÖ÷¶¯·¢ÆðµÄÁ¬½Ó¡£
 
