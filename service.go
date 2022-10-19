@@ -30,6 +30,7 @@ func (this *service) addconn(c *tcpconn) error {
 	c.svr = this
 	c.svrid = int(this.index)
 	c.loopid = this.loopid
+	this.loop.mod(c.fd, this, false, c.watchread, false, c.watchwrite)
 	return nil
 }
 
