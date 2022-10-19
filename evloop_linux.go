@@ -42,7 +42,6 @@ func newEvLoop(id int) *evloop {
 	if err != nil {
 		syscall.Close(epollfd)
 		panic(err)
-		return
 	}
 
 	return &evloop{id: id, epollfd: epollfd, notifyfd: int(notifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
