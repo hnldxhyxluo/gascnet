@@ -173,7 +173,7 @@ func (this *engine) AddService(svrid int, call func(svrid int, err error), evhan
 		}
 
 		if svrid >= len(this.svrs) {
-			wantlen := svrid / 10 + 10
+			wantlen := svrid/10 + 10
 			svrs := make([]*svrinfo, wantlen, wantlen)
 			for i, v := range this.svrs {
 				svrs[i] = v
@@ -241,7 +241,7 @@ func (this *engine) StartService(svrid int, call func(svrid int, err error)) err
 		if this.svrs[svrid] == nil {
 			call(svrid, errors.New("svrid not found"))
 		}
-		
+
 		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {
@@ -285,7 +285,7 @@ func (this *engine) StopService(svrid int, call func(svrid int, err error)) erro
 		if this.svrs[svrid] == nil {
 			call(svrid, errors.New("svrid not found"))
 		}
-		
+
 		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {
@@ -323,7 +323,7 @@ func (this *engine) DelService(svrid int, call func(svrid int, err error)) error
 		if this.svrs[svrid] == nil {
 			call(svrid, errors.New("svrid not found"))
 		}
-		
+
 		info := this.svrs[svrid]
 
 		if info.curstate != info.dststate {

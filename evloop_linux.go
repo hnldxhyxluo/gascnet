@@ -20,17 +20,29 @@ type evloop struct {
 	asyncqueue *funcqueue
 }
 
+var (
+	notifyvalue uint64 = 1
+	notifydata         = (*(*[8]byte)(unsafe.Pointer(&notifyvalue)))[:]
+)
+
 func newEvLoop(id int) *evloop {
 	epollfd, err := syscall.EpollCreate1(0)
 	if err != nil {
 		panic(err)
 	}
 
-	//notifyfd, _, ret := syscall.Syscall(syscall.SYS_EVENTFD2, 0, 0, 0)
-	notifyfd, _, ret := syscall.RawSyscall(syscall.SYS_EVENTFD2, 0, 0, 0)
-	if ret != 0 {
+	/*
+		//notifyfd, _, ret := syscall.Syscall(syscall.SYS_EVENTFD2, 0, 0, 0)
+		notifyfd, _, ret := syscall.RawSyscall(syscall.SYS_EVENTFD2, 0, 0, 0)
+		if ret != 0 {
+			syscall.Close(epollfd)
+			panic(errors.New("SYS_EVENTFD2"))
+		}*/
+	notifyfd, err := unix.Eventfd(0, unix.EFD_NONBLOCK|unix.EFD_CLOEXEC)
+	if err != nil {
 		syscall.Close(epollfd)
-		panic(errors.New("SYS_EVENTFD2"))
+		panic(err)
+		return
 	}
 
 	return &evloop{id: id, epollfd: epollfd, notifyfd: int(notifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
@@ -89,9 +101,11 @@ func (this *evloop) notify(c call) error {
 		return errors.New("push queue fail")
 	}
 	if atomic.CompareAndSwapInt32(&this.notifyflag, 0, 1) {
-		var x uint64 = 1
-		_, err := syscall.Write(this.notifyfd, (*(*[8]byte)(unsafe.Pointer(&x)))[:])
-		return err
+		//var x uint64 = 1
+		//_, err := syscall.Write(this.notifyfd, (*(*[8]byte)(unsafe.Pointer(&x)))[:])
+		if _, err := unix.Write(this.notifyfd, notifydata); err != nil && err != unix.EAGAIN {
+			return err
+		}
 	}
 	return nil
 }
