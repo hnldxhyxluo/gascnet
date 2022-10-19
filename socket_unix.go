@@ -47,7 +47,7 @@ func socketSetLinger(fd, sec int) error {
 }
 
 func socketSetKeepAlive(fd, secs int) error {
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 0x8, 1); err != nil {
+	/*if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 0x8, 1); err != nil {
 		return err
 	}
 	switch err := syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, 0x101, secs); err {
@@ -57,4 +57,16 @@ func socketSetKeepAlive(fd, secs int) error {
 	}
 	//return syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, syscall.TCP_KEEPALIVE, secs)
 	return nil
+	*/
+
+	if secs <= 0 {
+		return nil
+	}
+	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_KEEPALIVE, 1); err != nil {
+		return err
+	}
+	if err := unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_KEEPINTVL, secs); err != nil {
+		return err
+	}
+	return unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_KEEPIDLE, secs)
 }
