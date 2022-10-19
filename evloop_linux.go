@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"unsafe"
-	//"golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 )
 
 type evloop struct {
