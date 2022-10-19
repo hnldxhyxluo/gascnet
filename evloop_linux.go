@@ -26,13 +26,14 @@ func newEvLoop(id int) *evloop {
 		panic(err)
 	}
 
-	pnotifyfd, _, ret := syscall.Syscall(syscall.SYS_EVENTFD2, 0, 0, 0)
+	//notifyfd, _, ret := syscall.Syscall(syscall.SYS_EVENTFD2, 0, 0, 0)
+	notifyfd, _, ret := syscall.RawSyscall(syscall.SYS_EVENTFD2, 0, 0, 0)
 	if ret != 0 {
 		syscall.Close(epollfd)
 		panic(errors.New("SYS_EVENTFD2"))
 	}
 
-	return &evloop{id: id, epollfd: epollfd, notifyfd: int(pnotifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
+	return &evloop{id: id, epollfd: epollfd, notifyfd: int(notifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
 }
 
 func (this *evloop) Close() {
@@ -49,6 +50,7 @@ func (this *evloop) run(lockosthread bool) {
 
 	events := make([]syscall.EpollEvent, 128)
 	havenotify := false
+	var evbuf [8]byte
 	for {
 		n, err := syscall.EpollWait(this.epollfd, events, 100)
 		if n == 0 || (n < 0 && (err == syscall.EINTR || err == syscall.EAGAIN)) {
@@ -67,14 +69,15 @@ func (this *evloop) run(lockosthread bool) {
 				svr.readwrite(fd, (ev&syscall.EPOLLIN) != 0, (ev&syscall.EPOLLOUT) != 0)
 			} else {
 				//先清标记 再读数据
-				atomic.StoreInt32(&this.notifyflag, 0)
-				var buf [8]byte
-				syscall.Read(this.notifyfd, buf[:])
+				//atomic.StoreInt32(&this.notifyflag, 0)
+				//syscall.Read(this.notifyfd, evbuf[:])
 				havenotify = true
 			}
 		}
 
 		if havenotify {
+			atomic.StoreInt32(&this.notifyflag, 0)
+			syscall.Read(this.notifyfd, evbuf[:])
 			this.doasync()
 			havenotify = false
 		}
