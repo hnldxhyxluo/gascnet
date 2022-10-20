@@ -62,7 +62,7 @@ func (this *evloop) run(lockosthread bool) {
 
 	events := make([]syscall.EpollEvent, 128)
 	havenotify := false
-	var evbuf [8]byte
+	evbuf := make([]byte, 8)
 	for {
 		n, err := syscall.EpollWait(this.epollfd, events, 100)
 		if n == 0 || (n < 0 && (err == syscall.EINTR || err == syscall.EAGAIN)) {
@@ -89,7 +89,7 @@ func (this *evloop) run(lockosthread bool) {
 
 		if havenotify {
 			atomic.StoreInt32(&this.notifyflag, 0)
-			syscall.Read(this.notifyfd, evbuf[:])
+			syscall.Read(this.notifyfd, evbuf)
 			this.doasync()
 			havenotify = false
 		}
