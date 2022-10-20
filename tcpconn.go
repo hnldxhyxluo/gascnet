@@ -130,13 +130,10 @@ func (this *tcpconn) Write(buf []byte) (int, error) {
 
 func (this *tcpconn) Read(buf []byte) (int, error) {
 	if n, err := syscall.Read(this.fd, buf); n <= 0 {
-		if err != nil {
-			if err == syscall.EAGAIN || err == syscall.EINTR {
-				return 0, nil
-			}
-			return 0, err
+		if err == syscall.EAGAIN || err == syscall.EINTR {
+			return 0, nil
 		}
-		return n, nil
+		return 0, err
 	} else {
 		return n, err
 	}
@@ -144,13 +141,10 @@ func (this *tcpconn) Read(buf []byte) (int, error) {
 
 func (this *tcpconn) Write(buf []byte) (int, error) {
 	if n, err := syscall.Write(this.fd, buf); n <= 0 {
-		if err != nil {
-			if err == syscall.EAGAIN || err == syscall.EINTR {
-				return 0, nil
-			}
-			return 0, err
+		if err == syscall.EAGAIN || err == syscall.EINTR {
+			return 0, nil
 		}
-		return n, nil
+		return 0, err
 	} else {
 		return n, err
 	}
