@@ -4,7 +4,6 @@ import (
 	"errors"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -27,7 +26,8 @@ var (
 )
 
 func newEvLoop(id int, notifyqueuelen int) *evloop {
-	epollfd, err := syscall.EpollCreate1(0)
+	//epollfd, err := syscall.EpollCreate1(0)
+	epollfd, err := unix.EpollCreate1(unix.EPOLL_CLOEXEC)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func newEvLoop(id int, notifyqueuelen int) *evloop {
 		}*/
 	notifyfd, err := unix.Eventfd(0, unix.EFD_NONBLOCK|unix.EFD_CLOEXEC)
 	if err != nil {
-		syscall.Close(epollfd)
+		unix.Close(epollfd)
 		panic(err)
 	}
 
@@ -60,12 +60,13 @@ func (this *evloop) run(lockosthread bool) {
 
 	this.mod(this.notifyfd, nil, false, true, false, false)
 
-	events := make([]syscall.EpollEvent, 128)
+	eventn := 128
+	events := make([]unix.EpollEvent, eventn)
 	havenotify := false
 	evbuf := make([]byte, 8)
 	for {
-		n, err := syscall.EpollWait(this.epollfd, events, 100)
-		if n == 0 || (n < 0 && (err == syscall.EINTR || err == syscall.EAGAIN)) {
+		n, err := unix.EpollWait(this.epollfd, events, 100)
+		if n == 0 || (n < 0 && (err == unix.EINTR || err == unix.EAGAIN)) {
 			//runtime.Gosched()
 			continue
 		} else if err != nil {
@@ -78,20 +79,31 @@ func (this *evloop) run(lockosthread bool) {
 			ev := events[i].Events
 			if fd != this.notifyfd {
 				svr := this.svrs[svridx]
-				svr.readwrite(fd, (ev&syscall.EPOLLIN) != 0, (ev&syscall.EPOLLOUT) != 0)
+				svr.readwrite(fd, (ev&unix.EPOLLIN) != 0, (ev&unix.EPOLLOUT) != 0)
 			} else {
 				//先清标记 再读数据
 				//atomic.StoreInt32(&this.notifyflag, 0)
 				//syscall.Read(this.notifyfd, evbuf[:])
+				//log.Printf("loopid:%d epfd:%d notified\n", this.id, this.epollfd)
 				havenotify = true
 			}
 		}
 
-		if havenotify {
+		//if havenotify {
+		if havenotify || this.notifyflag != 0 {
+			//log.Printf("loopid:%d epfd:%d read notifydata\n", this.id, this.epollfd)
 			atomic.StoreInt32(&this.notifyflag, 0)
-			syscall.Read(this.notifyfd, evbuf)
+			unix.Read(this.notifyfd, evbuf)
 			this.doasync()
 			havenotify = false
+		}
+
+		if n == eventn {
+			eventn = eventn << 1
+			events = make([]unix.EpollEvent, eventn)
+		} else if n < (eventn>>1) && eventn > 128 {
+			eventn = eventn >> 1
+			events = make([]unix.EpollEvent, eventn)
 		}
 	}
 }
@@ -100,13 +112,21 @@ func (this *evloop) notify(c call) error {
 	if !this.asyncqueue.push(c) {
 		return errors.New("push queue fail")
 	}
+
 	if atomic.CompareAndSwapInt32(&this.notifyflag, 0, 1) {
 		//var x uint64 = 1
 		//_, err := syscall.Write(this.notifyfd, (*(*[8]byte)(unsafe.Pointer(&x)))[:])
-		if _, err := unix.Write(this.notifyfd, notifydata); err != nil && err != unix.EAGAIN {
+		if n, err := unix.Write(this.notifyfd, notifydata); err != nil {
+			//if err != unix.EAGAIN {
 			return err
+			//}
+		} else if n <= 0 {
+			return errors.New("send fail")
 		}
-	}
+	} //else {
+	//	log.Printf("loopid:%d epfd:%d no need write notifydata\n", this.id, this.epollfd)
+	//}
+
 	return nil
 }
 
@@ -121,28 +141,28 @@ func (this *evloop) mod(fd int, svr *service, oldread, newread, oldwrite, newwri
 		if !newread && !newwrite {
 			return
 		}
-		oper = syscall.EPOLL_CTL_ADD
+		oper = unix.EPOLL_CTL_ADD
 		if newread {
-			ev = syscall.EPOLLIN
+			ev = unix.EPOLLIN
 		}
 		if newwrite {
-			ev = ev | syscall.EPOLLOUT
+			ev = ev | unix.EPOLLOUT
 		}
 	} else if newread || newwrite {
-		oper = syscall.EPOLL_CTL_MOD
+		oper = unix.EPOLL_CTL_MOD
 		if newread {
-			ev = syscall.EPOLLIN
+			ev = unix.EPOLLIN
 		}
 		if newwrite {
-			ev = ev | syscall.EPOLLOUT
+			ev = ev | unix.EPOLLOUT
 		}
 	} else {
-		oper = syscall.EPOLL_CTL_DEL
-		ev = syscall.EPOLLIN | syscall.EPOLLOUT
+		oper = unix.EPOLL_CTL_DEL
+		ev = unix.EPOLLIN | unix.EPOLLOUT
 	}
 
-	if err := syscall.EpollCtl(this.epollfd, oper, fd,
-		&syscall.EpollEvent{Fd: int32(fd),
+	if err := unix.EpollCtl(this.epollfd, oper, fd,
+		&unix.EpollEvent{Fd: int32(fd),
 			Events: ev,
 			Pad:    index,
 		},

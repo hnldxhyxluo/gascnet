@@ -55,8 +55,8 @@ func newEngine(opts ...EngOption) Engine {
 		}
 	}
 
-	if egopt.notifyqueuelen < 20 {
-		egopt.notifyqueuelen = 20
+	if egopt.notifyqueuelen < 64 {
+		egopt.notifyqueuelen = 64
 	}
 
 	loops := make([]*evloop, 0, egopt.numloops)
