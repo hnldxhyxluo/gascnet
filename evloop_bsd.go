@@ -22,7 +22,7 @@ type evloop struct {
 	asyncqueue *funcqueue
 }
 
-func newEvLoop(id int) *evloop {
+func newEvLoop(id int, notifyqueuelen int) *evloop {
 	kqueuefd, err := syscall.Kqueue()
 	if err != nil {
 		panic(err)
@@ -38,7 +38,7 @@ func newEvLoop(id int) *evloop {
 		panic(err)
 	}
 
-	return &evloop{id: id, kqueuefd: kqueuefd, svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
+	return &evloop{id: id, kqueuefd: kqueuefd, svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(notifyqueuelen, 0)}
 }
 
 func (this *evloop) Close() {

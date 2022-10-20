@@ -3,8 +3,9 @@ package gascnet
 type EngOption func(*engoption)
 
 type engoption struct {
-	numloops   int
-	lockthread bool
+	numloops       int
+	lockthread     bool
+	notifyqueuelen int
 }
 
 func WithLoops(value int) EngOption {
@@ -16,6 +17,12 @@ func WithLoops(value int) EngOption {
 func WithLockThread(value bool) EngOption {
 	return func(opt *engoption) {
 		opt.lockthread = value
+	}
+}
+
+func WithNotifyQueueLen(value int) EngOption {
+	return func(opt *engoption) {
+		opt.notifyqueuelen = value
 	}
 }
 

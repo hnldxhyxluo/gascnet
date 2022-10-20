@@ -26,7 +26,7 @@ var (
 	notifydata         = (*(*[8]byte)(unsafe.Pointer(&notifyvalue)))[:]
 )
 
-func newEvLoop(id int) *evloop {
+func newEvLoop(id int, notifyqueuelen int) *evloop {
 	epollfd, err := syscall.EpollCreate1(0)
 	if err != nil {
 		panic(err)
@@ -45,7 +45,7 @@ func newEvLoop(id int) *evloop {
 		panic(err)
 	}
 
-	return &evloop{id: id, epollfd: epollfd, notifyfd: int(notifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(10, 0)}
+	return &evloop{id: id, epollfd: epollfd, notifyfd: int(notifyfd), svrs: make([]*service, 0, 5), asyncqueue: NewFuncQueue(notifyqueuelen, 0)}
 }
 
 func (this *evloop) Close() {

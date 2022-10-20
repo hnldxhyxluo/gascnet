@@ -15,7 +15,7 @@ type evloop struct {
 	asyncqueue *funcqueue
 }
 
-func newEvLoop(id int) *evloop {
+func newEvLoop(id int, notifyqueuelen int) *evloop {
 	return nil
 }
 
