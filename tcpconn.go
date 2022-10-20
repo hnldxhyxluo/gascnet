@@ -101,6 +101,7 @@ func (this *tcpconn) Watch(canread, canwrite bool) error {
 	return this.svr.Watch(this, canread, canwrite)
 }
 
+/*
 func (this *tcpconn) Read(buf []byte) (int, error) {
 	if n, err := syscall.Read(this.fd, buf); err == nil {
 		if n == 0 {
@@ -124,6 +125,35 @@ func (this *tcpconn) Write(buf []byte) (int, error) {
 		return n, err
 	}
 	//return syscall.Write(this.fd, buf)
+}
+*/
+
+func (this *tcpconn) Read(buf []byte) (int, error) {
+	if n, err := syscall.Read(this.fd, buf); n <= 0 {
+		if err != nil {
+			if err == syscall.EAGAIN || err == syscall.EINTR {
+				return 0, nil
+			}
+			return 0, err
+		}
+		return n, nil
+	} else {
+		return n, err
+	}
+}
+
+func (this *tcpconn) Write(buf []byte) (int, error) {
+	if n, err := syscall.Write(this.fd, buf); n <= 0 {
+		if err != nil {
+			if err == syscall.EAGAIN || err == syscall.EINTR {
+				return 0, nil
+			}
+			return 0, err
+		}
+		return n, nil
+	} else {
+		return n, err
+	}
 }
 
 func dial(protoaddr string) (Conn, error) {

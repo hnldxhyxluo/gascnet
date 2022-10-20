@@ -57,7 +57,7 @@ func (this *evloop) run(lockosthread bool) {
 		//n, err := syscall.Kevent(this.kqueuefd, this.evtasks, events, nil)
 		n, err := syscall.Kevent(this.kqueuefd, nil, events, nil)
 		if n == 0 || (n < 0 && (err == syscall.EINTR || err == syscall.EAGAIN)) {
-			runtime.Gosched()
+			//runtime.Gosched()
 			continue
 		} else if err != nil {
 			panic(err)

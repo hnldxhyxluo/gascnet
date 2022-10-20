@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"unsafe"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -65,7 +66,7 @@ func (this *evloop) run(lockosthread bool) {
 	for {
 		n, err := syscall.EpollWait(this.epollfd, events, 100)
 		if n == 0 || (n < 0 && (err == syscall.EINTR || err == syscall.EAGAIN)) {
-			runtime.Gosched()
+			//runtime.Gosched()
 			continue
 		} else if err != nil {
 			panic(err)
