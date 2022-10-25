@@ -92,7 +92,7 @@ type Conn interface {
 
 	//socket opt
 	SetLinger(sec int) error
-	SetKeepAlivePeriod(sec int) error
+	SetKeepAlivePeriod(sec, probes int) error
 	SetNoDelay(nodelay bool) error
 
 	Close() error
