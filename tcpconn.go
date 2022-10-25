@@ -67,8 +67,8 @@ func (this *tcpconn) SetLinger(sec int) error {
 	return socketSetLinger(this.fd, sec)
 }
 
-func (this *tcpconn) SetKeepAlivePeriod(sec int) error {
-	return socketSetKeepAlive(this.fd, sec)
+func (this *tcpconn) SetKeepAlivePeriod(sec, probes int) error {
+	return socketSetKeepAlive(this.fd, sec, probes)
 }
 
 func (this *tcpconn) SetNoDelay(nodelay bool) error {

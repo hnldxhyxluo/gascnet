@@ -36,6 +36,6 @@ func socketSetLinger(fd, sec int) error {
 	return nil
 }
 
-func socketSetKeepAlive(fd, secs int) error {
+func socketSetKeepAlive(fd, secs, probes int) error {
 	return nil
 }

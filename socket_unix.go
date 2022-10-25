@@ -46,7 +46,7 @@ func socketSetLinger(fd, sec int) error {
 	return unix.SetsockoptLinger(fd, syscall.SOL_SOCKET, syscall.SO_LINGER, &lin)
 }
 
-func socketSetKeepAlive(fd, secs int) error {
+func socketSetKeepAlive(fd, secs, probes int) error {
 	/*if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 0x8, 1); err != nil {
 		return err
 	}
@@ -68,5 +68,12 @@ func socketSetKeepAlive(fd, secs int) error {
 	if err := unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_KEEPINTVL, secs); err != nil {
 		return err
 	}
+	//设置探测次数
+	if probes > 0 {
+		if err := unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_KEEPCNT, probes); err != nil {
+			return err
+		}
+	}
+
 	return unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_KEEPIDLE, secs)
 }
