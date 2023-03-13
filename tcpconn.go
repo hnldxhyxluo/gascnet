@@ -133,6 +133,9 @@ func (this *tcpconn) Read(buf []byte) (int, error) {
 		if err == syscall.EAGAIN || err == syscall.EINTR {
 			return 0, nil
 		}
+		if err != nil {
+			return 0, err
+		}
 		return 0, errors.New("remote closed")
 	} else {
 		return n, err
@@ -143,6 +146,9 @@ func (this *tcpconn) Write(buf []byte) (int, error) {
 	if n, err := syscall.Write(this.fd, buf); n <= 0 {
 		if err == syscall.EAGAIN || err == syscall.EINTR {
 			return 0, nil
+		}
+		if err != nil {
+			return 0, err
 		}
 		return 0, errors.New("remote closed")
 	} else {
