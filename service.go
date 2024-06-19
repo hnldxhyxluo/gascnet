@@ -81,7 +81,7 @@ func (this *service) readwrite(fd int, canread, canwrite bool) {
 			this.evhandle.OnConnReadWrite(this.loopid, c, canread, canwrite)
 		} else {
 			this.evhandle.OnServiceErr(this.loop.id, fmt.Errorf("fd:%d not found in this service", fd))
-			this.loop.mod(fd, this, true, false, true, false)
+			//this.loop.mod(fd, this, true, false, true, false)
 			//socketClose(fd)
 		}
 	}
